@@ -3,91 +3,83 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>2D 폴링샌드 샌드박스</title>
+    <title>Eco Sandbox Evolution Engine</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="app">
-      <header class="controls">
-        <label>
-          물질
-          <select id="materialSelect"></select>
-        </label>
-
-        <label>
-          브러시 크기
-          <input id="brushSize" type="range" min="1" max="20" value="6" />
-          <span id="brushSizeValue">6</span>
-        </label>
-
-        <div class="mode-toggle">
-          <button id="drawModeBtn" class="active">생성</button>
-          <button id="eraseModeBtn">삭제</button>
+    <div class="app-shell">
+      <header class="top-bar">
+        <div class="tabs">
+          <button data-tab="tab-materials" class="active">Materials</button>
+          <button data-tab="tab-life">Life</button>
+          <button data-tab="tab-environment">Environment</button>
+          <button data-tab="tab-evolution">Evolution</button>
+          <button data-tab="tab-debug">Debug</button>
         </div>
-
-        <button id="pauseBtn">일시정지</button>
-        <button id="clearBtn">초기화</button>
-
-        <label>
-          속도
-          <input id="speedRange" type="range" min="1" max="6" value="2" />
-          <span id="speedValue">2x</span>
-        </label>
-
-        <button id="interactionsBtn">설명/도감</button>
-        <div class="status">FPS: <span id="fps">0</span></div>
+        <div class="env-controls">
+          <label>Season
+            <select id="seasonSelect">
+              <option value="spring">spring</option>
+              <option value="summer">summer</option>
+              <option value="fall">fall</option>
+              <option value="winter">winter</option>
+            </select>
+          </label>
+          <label>Temperature <input type="range" id="tempRange" min="-20" max="60" value="22" /></label>
+          <label>Rainfall <input type="range" id="rainRange" min="0" max="1" step="0.01" value="0.3" /></label>
+          <label>Speed <input type="range" id="speedRange" min="0.5" max="4" step="0.1" value="1" /></label>
+        </div>
       </header>
 
-      <main>
-        <canvas id="sandboxCanvas" width="800" height="600"></canvas>
+      <main class="workspace">
+        <aside class="left-panel">
+          <h3>Materials Palette</h3>
+          <div id="materialsPalette"></div>
+        </aside>
+
+        <section class="sim-panel">
+          <canvas id="sandboxCanvas" width="960" height="576"></canvas>
+
+          <div class="tab-content">
+            <section id="tab-materials" class="tab-panel active">
+              <p>환경을 그리며 토양/수분/독성 기반 생태 지형을 구성하세요.</p>
+            </section>
+            <section id="tab-life" class="tab-panel">
+              <p>우측 Life Palette에서 종을 추가해 먹이사슬과 종 다양성을 실험하세요.</p>
+            </section>
+            <section id="tab-environment" class="tab-panel">
+              <ul id="climateEvents"></ul>
+            </section>
+            <section id="tab-evolution" class="tab-panel">
+              <p>진화 트리: microbe → primitive organism → predator class → apex predator</p>
+            </section>
+            <section id="tab-debug" class="tab-panel">
+              <button id="toggleDebug">디버그 토글</button>
+              <button id="toggleRL">RL 모드 토글</button>
+              <label>성능 모드
+                <select id="performanceMode">
+                  <option value="balanced">Balanced</option>
+                  <option value="performance">Performance</option>
+                </select>
+              </label>
+            </section>
+          </div>
+        </section>
+
+        <aside class="right-panel">
+          <h3>Life Forms Palette</h3>
+          <div id="lifePalette"></div>
+        </aside>
       </main>
+
+      <footer class="bottom-bar">
+        <span>FPS: <strong id="fps">0</strong></span>
+        <span>개체수: <strong id="entityCount">0</strong></span>
+        <span>평균 유전자값(Intelligence): <strong id="avgGene">0</strong></span>
+        <span>진화 상태: <strong id="evoStatus">조건 미충족</strong></span>
+      </footer>
     </div>
 
-    <div id="interactionsModal" class="modal hidden" aria-hidden="true">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>물질 상호작용 도감</h2>
-          <button id="closeModalBtn">닫기</button>
-        </div>
-        <div class="modal-body">
-          <section>
-            <h3>물질 속성</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>물질</th>
-                  <th>카테고리</th>
-                  <th>밀도</th>
-                  <th>거동</th>
-                  <th>특징</th>
-                </tr>
-              </thead>
-              <tbody id="materialsTableBody"></tbody>
-            </table>
-          </section>
-
-          <section>
-            <h3>상호작용 규칙 (코드와 동기화)</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>규칙</th>
-                  <th>트리거</th>
-                  <th>결과</th>
-                </tr>
-              </thead>
-              <tbody id="rulesTableBody"></tbody>
-            </table>
-          </section>
-
-          <section>
-            <h3>물질별 소개 / 변화 규칙</h3>
-            <div id="materialCards" class="material-cards"></div>
-          </section>
-        </div>
-      </div>
-    </div>
-
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
   </body>
 </html>
