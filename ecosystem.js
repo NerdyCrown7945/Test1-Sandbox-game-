@@ -1,6 +1,7 @@
 import { spawnLifeform } from './lifeforms.js';
 import { breedDNA } from './dna.js';
 import { MATERIAL_MAP } from './materials.js';
+import { TERRAIN_INTERACTION_RULES } from './interactions.js';
 
 class Quadtree {
   constructor(boundary, capacity = 8, depth = 0) {
@@ -65,6 +66,8 @@ export function buildSpatialIndex(entities, world) {
 }
 
 export function ecosystemStep(world, dt) {
+  applyTerrainTransformRules(world, dt);
+
   const births = [];
   const deaths = new Set();
   const qt = buildSpatialIndex(world.entities, world);
@@ -103,6 +106,35 @@ export function ecosystemStep(world, dt) {
 
   world.entities = world.entities.filter((e) => !deaths.has(e.id));
   world.entities.push(...births.slice(0, Math.max(0, world.maxEntities - world.entities.length)));
+}
+
+function applyTerrainTransformRules(world, dt) {
+  if (dt <= 0) return;
+
+  const { terrain, gridWidth, gridHeight } = world;
+  for (let y = 0; y < gridHeight; y += 1) {
+    for (let x = 0; x < gridWidth; x += 1) {
+      const idx = y * gridWidth + x;
+      const current = terrain[idx];
+      if (current === 'empty') continue;
+
+      const neighbors = [];
+      if (x > 0) neighbors.push(terrain[idx - 1]);
+      if (x < gridWidth - 1) neighbors.push(terrain[idx + 1]);
+      if (y > 0) neighbors.push(terrain[idx - gridWidth]);
+      if (y < gridHeight - 1) neighbors.push(terrain[idx + gridWidth]);
+
+      for (const rule of TERRAIN_INTERACTION_RULES) {
+        if (!rule.materials.includes(current)) continue;
+        const hasPairMaterial = neighbors.some((mat) => rule.materials.includes(mat) && mat !== current);
+        if (!hasPairMaterial) continue;
+        if (Math.random() < Math.min(1, rule.chancePerSecond * dt)) {
+          terrain[idx] = rule.result;
+          break;
+        }
+      }
+    }
+  }
 }
 
 function getTerrainAt(entity, world) {
