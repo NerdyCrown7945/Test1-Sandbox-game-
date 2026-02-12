@@ -23,10 +23,10 @@ export function initUI(engine) {
   });
 
   const matRoot = document.getElementById('materialsPalette');
-  renderMaterialPalette(matRoot, engine);
+  if (matRoot) renderMaterialPalette(matRoot, engine);
 
   const lifeRoot = document.getElementById('lifePalette');
-  renderLifePalette(lifeRoot, engine);
+  if (lifeRoot) renderLifePalette(lifeRoot, engine);
 
   hookEnvControls(engine);
   hookToggles(engine);
@@ -34,13 +34,14 @@ export function initUI(engine) {
 
 function renderMaterialPalette(root, engine) {
   const groups = grouped(MATERIALS);
+
   root.innerHTML = Object.entries(groups).map(([cat, mats]) => `
     <section class="palette-group">
       <h4>${cat}</h4>
       ${mats.map((mat) => `
         <button class="palette-item" data-material="${mat.id}">
           <span class="swatch" style="background:${mat.color}"></span>
-          <span class="icon">${mat.icon}</span>
+          <span class="icon">${mat.icon ?? ''}</span>
           <span>${mat.name}</span>
         </button>`).join('')}
     </section>
@@ -66,13 +67,23 @@ function renderLifePalette(root, engine) {
 
   root.querySelectorAll('[data-species]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      engine.spawnSpecies(btn.dataset.species);
+      // 엔진에 spawnSpecies가 없을 수도 있으므로 방어
+      if (typeof engine.spawnSpecies === 'function') {
+        engine.spawnSpecies(btn.dataset.species);
+      } else if (engine.world && typeof engine.world.spawnSpecies === 'function') {
+        engine.world.spawnSpecies(btn.dataset.species);
+      } else {
+        console.warn('spawnSpecies()가 엔진에 없습니다. engine.spawnSpecies 또는 engine.world.spawnSpecies를 구현하세요.');
+      }
     });
   });
 
-  document.getElementById('climateEvents').innerHTML = CLIMATE_EVENTS
-    .map((event) => `<li><strong>${event.name}</strong>: ${event.impact}</li>`)
-    .join('');
+  const ce = document.getElementById('climateEvents');
+  if (ce) {
+    ce.innerHTML = CLIMATE_EVENTS
+      .map((event) => `<li><strong>${event.name}</strong>: ${event.impact}</li>`)
+      .join('');
+  }
 }
 
 function hookEnvControls(engine) {
@@ -86,6 +97,7 @@ function hookEnvControls(engine) {
   map.forEach(([id, key]) => {
     const el = document.getElementById(id);
     if (!el) return;
+
     el.addEventListener('input', () => {
       const val = id === 'seasonSelect' ? el.value : Number(el.value);
       if (key === 'simSpeed') engine[key] = val;
@@ -95,22 +107,33 @@ function hookEnvControls(engine) {
 }
 
 function hookToggles(engine) {
-  document.getElementById('toggleDebug').addEventListener('click', () => {
+  const dbg = document.getElementById('toggleDebug');
+  if (dbg) dbg.addEventListener('click', () => {
     engine.debug = !engine.debug;
   });
-  document.getElementById('toggleRL').addEventListener('click', () => {
+
+  const rl = document.getElementById('toggleRL');
+  if (rl) rl.addEventListener('click', () => {
     engine.world.rlEnabled = !engine.world.rlEnabled;
   });
-  document.getElementById('performanceMode').addEventListener('change', (e) => {
+
+  const perf = document.getElementById('performanceMode');
+  if (perf) perf.addEventListener('change', (e) => {
     engine.performanceMode = e.target.value;
     engine.world.maxEntities = e.target.value === 'performance' ? 350 : 700;
   });
 }
 
 export function updateDebugBar(engine, fps, evolutionText) {
+  const fpsEl = document.getElementById('fps');
+  const countEl = document.getElementById('entityCount');
+  const avgEl = document.getElementById('avgGene');
+  const evoEl = document.getElementById('evoStatus');
+
   const avgGene = engine.world.entities.reduce((acc, e) => acc + e.dna.intelligence, 0) / Math.max(1, engine.world.entities.length);
-  document.getElementById('fps').textContent = fps.toFixed(0);
-  document.getElementById('entityCount').textContent = String(engine.world.entities.length);
-  document.getElementById('avgGene').textContent = avgGene.toFixed(1);
-  document.getElementById('evoStatus').textContent = evolutionText;
+
+  if (fpsEl) fpsEl.textContent = fps.toFixed(0);
+  if (countEl) countEl.textContent = String(engine.world.entities.length);
+  if (avgEl) avgEl.textContent = avgGene.toFixed(1);
+  if (evoEl) evoEl.textContent = evolutionText;
 }
