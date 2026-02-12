@@ -1,6 +1,7 @@
 import { MATERIALS } from './materials.js';
 import { LIFEFORM_SPECIES } from './lifeforms.js';
 import { CLIMATE_EVENTS } from './climate.js';
+import { LIFE_TERRAIN_INTERACTION_RULES, TERRAIN_INTERACTION_RULES } from './interactions.js';
 
 function grouped(items) {
   return items.reduce((acc, item) => {
@@ -83,6 +84,13 @@ function renderLifePalette(root, engine) {
     ce.innerHTML = CLIMATE_EVENTS
       .map((event) => `<li><strong>${event.name}</strong>: ${event.impact}</li>`)
       .join('');
+  }
+
+  const interactionRoot = document.getElementById('interactionRules');
+  if (interactionRoot) {
+    const terrainRows = TERRAIN_INTERACTION_RULES.map((rule) => `<li><strong>${rule.id}</strong>: ${rule.summary}</li>`);
+    const lifeRows = LIFE_TERRAIN_INTERACTION_RULES.map((rule) => `<li><strong>${rule.id}</strong>: ${rule.summary}</li>`);
+    interactionRoot.innerHTML = [...terrainRows, ...lifeRows].join('');
   }
 }
 
