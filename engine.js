@@ -7,6 +7,53 @@ import { collectPopulationStats, evaluateEvolution } from './evolution.js';
 import { renderWorld } from './renderer.js';
 import { updateDebugBar } from './ui.js';
 
+function terrainIndex(world, x, y) {
+  return y * world.gridWidth + x;
+}
+
+function canDisplace(upperMat, lowerMat) {
+  if (!upperMat?.gravity) return false;
+  if (!lowerMat || lowerMat.id === 'empty') return true;
+  return upperMat.density > (lowerMat.density ?? 0);
+}
+
+function swapCells(world, x1, y1, x2, y2) {
+  const i1 = terrainIndex(world, x1, y1);
+  const i2 = terrainIndex(world, x2, y2);
+  [world.terrain[i1], world.terrain[i2]] = [world.terrain[i2], world.terrain[i1]];
+}
+
+function applyTerrainPhysics(world, dt) {
+  if (dt <= 0) return;
+  const stepCount = Math.max(1, Math.round(dt * 90));
+  for (let pass = 0; pass < stepCount; pass += 1) {
+    for (let y = world.gridHeight - 2; y >= 0; y -= 1) {
+      for (let x = 0; x < world.gridWidth; x += 1) {
+        const idx = terrainIndex(world, x, y);
+        const material = MATERIAL_MAP.get(world.terrain[idx]);
+        if (!material?.gravity) continue;
+
+        const down = MATERIAL_MAP.get(world.terrain[terrainIndex(world, x, y + 1)]);
+        if (canDisplace(material, down)) {
+          swapCells(world, x, y, x, y + 1);
+          continue;
+        }
+
+        const direction = Math.random() > 0.5 ? 1 : -1;
+        for (const dx of [direction, -direction]) {
+          const nx = x + dx;
+          if (nx < 0 || nx >= world.gridWidth) continue;
+          const diag = MATERIAL_MAP.get(world.terrain[terrainIndex(world, nx, y + 1)]);
+          if (canDisplace(material, diag)) {
+            swapCells(world, x, y, nx, y + 1);
+            break;
+          }
+        }
+      }
+    }
+  }
+}
+
 export class SimulationEngine {
   constructor(canvas) {
     this.canvas = canvas;
@@ -82,6 +129,7 @@ export class SimulationEngine {
 
   step(dt) {
     updateClimate(this.world.climate, dt);
+    applyTerrainPhysics(this.world, dt);
 
     for (const entity of this.world.entities) {
       entity.state = evaluateState(entity, entity._context || {});

@@ -1,5 +1,6 @@
 import { spawnLifeform } from './lifeforms.js';
 import { breedDNA } from './dna.js';
+import { MATERIAL_MAP } from './materials.js';
 
 class Quadtree {
   constructor(boundary, capacity = 8, depth = 0) {
@@ -90,6 +91,8 @@ export function ecosystemStep(world, dt) {
     }
 
     applyClimateDamage(entity, world.climate, dt);
+    applyTerrainInteraction(entity, world, dt);
+    applyEntityInteraction(entity, neighbors, deaths, dt);
     if (entity.health <= 0 || entity.age > entity.dna.lifespan) {
       deaths.add(entity.id);
       world.soilNutrition = Math.min(1, world.soilNutrition + 0.01);
@@ -100,6 +103,49 @@ export function ecosystemStep(world, dt) {
 
   world.entities = world.entities.filter((e) => !deaths.has(e.id));
   world.entities.push(...births.slice(0, Math.max(0, world.maxEntities - world.entities.length)));
+}
+
+function getTerrainAt(entity, world) {
+  const gx = Math.max(0, Math.min(world.gridWidth - 1, Math.floor((entity.x / world.width) * world.gridWidth)));
+  const gy = Math.max(0, Math.min(world.gridHeight - 1, Math.floor((entity.y / world.height) * world.gridHeight)));
+  return MATERIAL_MAP.get(world.terrain[gy * world.gridWidth + gx]);
+}
+
+function applyTerrainInteraction(entity, world, dt) {
+  const mat = getTerrainAt(entity, world);
+  if (!mat) return;
+
+  if (mat.category === 'hazard') entity.health -= dt * 8;
+  if (mat.id === 'lava') entity.health -= dt * 12;
+  if (mat.id === 'water' || mat.id === 'freshwater' || mat.id === 'saltwater') {
+    entity.hunger = Math.max(0, entity.hunger - dt * (0.8 + entity.dna.waterDependency / 200));
+  }
+
+  if (entity.dna.dietPreference !== 'carnivore' && mat.fertility > 0.5) {
+    entity.hunger = Math.max(0, entity.hunger - dt * 2.2 * mat.fertility);
+    entity.energy = Math.min(100, entity.energy + dt * 1.4 * mat.fertility);
+  }
+}
+
+function applyEntityInteraction(entity, neighbors, deaths, dt) {
+  if (entity.state === 'Attack' && entity.dna.dietPreference === 'carnivore') {
+    const prey = neighbors
+      .filter((n) => !deaths.has(n.id) && n.health > 0 && n.species !== entity.species)
+      .sort((a, b) => a.health - b.health)[0];
+    if (prey) {
+      const damage = dt * (12 + entity.dna.aggression * 0.1);
+      prey.health -= damage;
+      if (prey.health <= 0) {
+        deaths.add(prey.id);
+        entity.hunger = Math.max(0, entity.hunger - 18);
+        entity.energy = Math.min(100, entity.energy + 10);
+      }
+    }
+  }
+
+  if (entity.state === 'Reproduce' && neighbors.some((n) => n.species === entity.species)) {
+    entity.health = Math.min(100, entity.health + dt * 0.5);
+  }
 }
 
 function applyClimateDamage(entity, climate, dt) {
