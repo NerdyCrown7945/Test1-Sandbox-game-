@@ -15,12 +15,14 @@ export class SimulationEngine {
     this.performanceMode = 'balanced';
     this.lastTime = 0;
     this.fps = 0;
+    const gridWidth = 160;
+    const gridHeight = 96;
     this.world = {
       width: canvas.width,
       height: canvas.height,
-      gridWidth: 120,
-      gridHeight: 72,
-      terrain: createTerrain(120, 72),
+      gridWidth,
+      gridHeight,
+      terrain: createTerrain(gridWidth, gridHeight),
       climate: createClimate(),
       soilNutrition: 0.5
     };
