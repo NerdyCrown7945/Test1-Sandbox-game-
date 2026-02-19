@@ -16,14 +16,31 @@ function hasGravity(id) {
   return materialOf(id)?.gravity === true;
 }
 
+function displacementOf(id) {
+  return materialOf(id)?.displacement ?? 'neutral';
+}
+
 function isEmpty(id) {
   return id === 'empty';
 }
 
 function canSwapDown(topId, bottomId) {
   if (isEmpty(bottomId)) return true;
+
+  const topBehavior = behaviorOf(topId);
   const bottomBehavior = behaviorOf(bottomId);
+
   if (bottomBehavior === 'solid') return false;
+
+  // 파우더끼리는 서로를 관통하지 않게 해서 자연스러운 층이 쌓이게 한다.
+  if (topBehavior === 'powder' && bottomBehavior === 'powder') return false;
+
+  if (bottomBehavior === 'liquid') {
+    const displacement = displacementOf(topId);
+    if (displacement === 'floats') return false;
+    if (displacement === 'sinks') return true;
+  }
+
   return densityOf(topId) > densityOf(bottomId);
 }
 
@@ -57,6 +74,18 @@ export function stepTerrain(world, iterations = 1) {
         }
 
         if (behavior === 'powder') {
+          const aboveIndex = idx - width;
+          if (aboveIndex >= 0) {
+            const aboveId = terrain[aboveIndex];
+            const aboveBehavior = behaviorOf(aboveId);
+            const isInLiquid = behaviorOf(belowId) === 'liquid';
+            if (isInLiquid && aboveBehavior === 'liquid' && displacementOf(id) === 'floats') {
+              terrain[aboveIndex] = id;
+              terrain[idx] = aboveId;
+              continue;
+            }
+          }
+
           const downLeftIndex = x > 0 ? belowIndex - 1 : -1;
           const downRightIndex = x < width - 1 ? belowIndex + 1 : -1;
 
