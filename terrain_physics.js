@@ -30,10 +30,11 @@ function canSwapDown(topId, bottomId) {
   const topBehavior = behaviorOf(topId);
   const bottomBehavior = behaviorOf(bottomId);
 
-  if (bottomBehavior === 'solid') return false;
+  if (topBehavior === 'powder') {
+    return false;
+  }
 
-  // 파우더끼리는 서로를 관통하지 않게 해서 자연스러운 층이 쌓이게 한다.
-  if (topBehavior === 'powder' && bottomBehavior === 'powder') return false;
+  if (bottomBehavior === 'solid') return false;
 
   if (bottomBehavior === 'liquid') {
     const displacement = displacementOf(topId);
@@ -74,27 +75,15 @@ export function stepTerrain(world, iterations = 1) {
         }
 
         if (behavior === 'powder') {
-          const aboveIndex = idx - width;
-          if (aboveIndex >= 0) {
-            const aboveId = terrain[aboveIndex];
-            const aboveBehavior = behaviorOf(aboveId);
-            const isInLiquid = behaviorOf(belowId) === 'liquid';
-            if (isInLiquid && aboveBehavior === 'liquid' && displacementOf(id) === 'floats') {
-              terrain[aboveIndex] = id;
-              terrain[idx] = aboveId;
-              continue;
-            }
-          }
-
           const downLeftIndex = x > 0 ? belowIndex - 1 : -1;
           const downRightIndex = x < width - 1 ? belowIndex + 1 : -1;
 
           const tryMove = (nextIndex) => {
             if (nextIndex === -1) return false;
             const nextId = terrain[nextIndex];
-            if (!canSwapDown(id, nextId)) return false;
+            if (!isEmpty(nextId)) return false;
             terrain[nextIndex] = id;
-            terrain[idx] = nextId;
+            terrain[idx] = 'empty';
             return true;
           };
 
