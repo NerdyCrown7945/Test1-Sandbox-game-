@@ -30,10 +30,11 @@ export function initUI(engine) {
 
   hookEnvControls(engine);
   hookToggles(engine);
+  hookTools(engine);
 }
 
 function renderMaterialPalette(root, engine) {
-  const groups = grouped(MATERIALS);
+  const groups = grouped(MATERIALS.filter((m) => m.id !== 'empty'));
 
   root.innerHTML = Object.entries(groups).map(([cat, mats]) => `
     <section class="palette-group">
@@ -48,7 +49,9 @@ function renderMaterialPalette(root, engine) {
   `).join('');
 
   root.querySelectorAll('[data-material]').forEach((btn, index) => {
-    if (index === 0) btn.classList.add('selected');
+    if (btn.dataset.material === engine.selectedMaterial || (index === 0 && !engine.selectedMaterial)) {
+      btn.classList.add('selected');
+    }
     btn.addEventListener('click', () => {
       root.querySelectorAll('.palette-item').forEach((b) => b.classList.remove('selected'));
       btn.classList.add('selected');
@@ -80,6 +83,7 @@ function hookEnvControls(engine) {
     ['seasonSelect', 'season'],
     ['tempRange', 'globalTemperature'],
     ['rainRange', 'rainfall'],
+    ['sunlightRange', 'globalSunlight'],
     ['speedRange', 'simSpeed']
   ];
 
@@ -107,6 +111,22 @@ function hookToggles(engine) {
   });
 }
 
+function hookTools(engine) {
+  const drawBtn = document.getElementById('drawTool');
+  const eraserBtn = document.getElementById('eraserTool');
+  const clearBtn = document.getElementById('clearAllBtn');
+
+  const setMode = (mode) => {
+    engine.brushMode = mode;
+    drawBtn?.classList.toggle('active', mode === 'draw');
+    eraserBtn?.classList.toggle('active', mode === 'eraser');
+  };
+
+  drawBtn?.addEventListener('click', () => setMode('draw'));
+  eraserBtn?.addEventListener('click', () => setMode('eraser'));
+  clearBtn?.addEventListener('click', () => engine.clearAll());
+}
+
 export function updateDebugBar(engine, fps) {
   const fpsEl = document.getElementById('fps');
   const countEl = document.getElementById('cellStats');
@@ -116,5 +136,8 @@ export function updateDebugBar(engine, fps) {
   if (fpsEl) fpsEl.textContent = fps.toFixed(0);
   if (countEl) countEl.textContent = String(engine.world.terrain.length);
   if (nutritionEl) nutritionEl.textContent = engine.world.soilNutrition.toFixed(2);
-  if (evoEl) evoEl.textContent = 'N/A';
+  if (evoEl) {
+    const lifeCount = engine.world.biology?.filter((id) => id !== 'none').length ?? 0;
+    evoEl.textContent = String(lifeCount);
+  }
 }

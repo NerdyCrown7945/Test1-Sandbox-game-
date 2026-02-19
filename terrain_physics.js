@@ -1,9 +1,5 @@
 import { MATERIAL_MAP } from './materials.js';
 
-function densityOf(id) {
-  return MATERIAL_MAP.get(id)?.density ?? 0;
-}
-
 function materialOf(id) {
   return MATERIAL_MAP.get(id);
 }
@@ -16,8 +12,8 @@ function hasGravity(id) {
   return materialOf(id)?.gravity === true;
 }
 
-function displacementOf(id) {
-  return materialOf(id)?.displacement ?? 'neutral';
+function densityOf(id) {
+  return materialOf(id)?.density ?? 0;
 }
 
 function isEmpty(id) {
@@ -30,18 +26,51 @@ function canSwapDown(topId, bottomId) {
   const topBehavior = behaviorOf(topId);
   const bottomBehavior = behaviorOf(bottomId);
 
-  if (bottomBehavior === 'solid') return false;
-
-  // 파우더끼리는 서로를 관통하지 않게 해서 자연스러운 층이 쌓이게 한다.
-  if (topBehavior === 'powder' && bottomBehavior === 'powder') return false;
-
-  if (bottomBehavior === 'liquid') {
-    const displacement = displacementOf(topId);
-    if (displacement === 'floats') return false;
-    if (displacement === 'sinks') return true;
+  if (topBehavior === 'powder') {
+    // powder는 liquid를 통과해 침강할 수 있지만, 그 외 물질은 밀어내지 않는다.
+    return bottomBehavior === 'liquid';
   }
 
-  return densityOf(topId) > densityOf(bottomId);
+  if (topBehavior === 'liquid') {
+    // liquid는 powder/solid를 뚫고 내려가지 않는다.
+    if (bottomBehavior === 'solid' || bottomBehavior === 'powder') return false;
+    if (bottomBehavior === 'liquid') return densityOf(topId) > densityOf(bottomId);
+    return false;
+  }
+
+  return false;
+}
+
+function applyVoidEffects(world) {
+  const { terrain, gridWidth: width, gridHeight: height } = world;
+  const pendingClear = new Set();
+  const offsets = [-1, 0, 1];
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const idx = y * width + x;
+      if (terrain[idx] !== 'void') continue;
+
+      for (const dy of offsets) {
+        for (const dx of offsets) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+          const nIdx = ny * width + nx;
+          const id = terrain[nIdx];
+          if (id === 'empty') continue;
+          if (behaviorOf(id) === 'solid') continue;
+          pendingClear.add(nIdx);
+        }
+      }
+    }
+  }
+
+  pendingClear.forEach((index) => {
+    terrain[index] = 'empty';
+    if (world.biology) world.biology[index] = 'none';
+  });
 }
 
 export function stepTerrain(world, iterations = 1) {
@@ -59,10 +88,10 @@ export function stepTerrain(world, iterations = 1) {
       for (let x = xStart; x !== xEnd; x += xStep) {
         const idx = y * width + x;
         const id = terrain[idx];
-        if (isEmpty(id)) continue;
+        if (isEmpty(id) || id === 'void') continue;
 
         const behavior = behaviorOf(id);
-        if (!hasGravity(id) || behavior === 'solid' || behavior === 'empty') continue;
+        if (!hasGravity(id) || behavior === 'solid' || behavior === 'empty' || behavior === 'special') continue;
 
         const belowIndex = idx + width;
         const belowId = terrain[belowIndex];
@@ -74,27 +103,15 @@ export function stepTerrain(world, iterations = 1) {
         }
 
         if (behavior === 'powder') {
-          const aboveIndex = idx - width;
-          if (aboveIndex >= 0) {
-            const aboveId = terrain[aboveIndex];
-            const aboveBehavior = behaviorOf(aboveId);
-            const isInLiquid = behaviorOf(belowId) === 'liquid';
-            if (isInLiquid && aboveBehavior === 'liquid' && displacementOf(id) === 'floats') {
-              terrain[aboveIndex] = id;
-              terrain[idx] = aboveId;
-              continue;
-            }
-          }
-
           const downLeftIndex = x > 0 ? belowIndex - 1 : -1;
           const downRightIndex = x < width - 1 ? belowIndex + 1 : -1;
 
           const tryMove = (nextIndex) => {
             if (nextIndex === -1) return false;
             const nextId = terrain[nextIndex];
-            if (!canSwapDown(id, nextId)) return false;
+            if (!isEmpty(nextId)) return false;
             terrain[nextIndex] = id;
-            terrain[idx] = nextId;
+            terrain[idx] = 'empty';
             return true;
           };
 
@@ -115,7 +132,12 @@ export function stepTerrain(world, iterations = 1) {
             if (nextIndex === -1) return false;
             const nextId = terrain[nextIndex];
             const nextBehavior = behaviorOf(nextId);
-            if (isEmpty(nextId) || (nextBehavior !== 'solid' && densityOf(id) > densityOf(nextId))) {
+            if (isEmpty(nextId)) {
+              terrain[nextIndex] = id;
+              terrain[idx] = 'empty';
+              return true;
+            }
+            if (nextBehavior === 'liquid' && densityOf(id) > densityOf(nextId)) {
               terrain[nextIndex] = id;
               terrain[idx] = nextId;
               return true;
@@ -133,5 +155,7 @@ export function stepTerrain(world, iterations = 1) {
         }
       }
     }
+
+    applyVoidEffects(world);
   }
 }

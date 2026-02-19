@@ -1,5 +1,6 @@
 export const MATERIALS = [
   { id: 'empty', name: 'Empty', color: '#111318', icon: '⬛', category: 'base', behavior: 'empty', fertility: 0, permeability: 1, gravity: false, density: 0 },
+  { id: 'void', name: 'Void', color: '#000000', icon: '🕳️', category: 'special', behavior: 'special', fertility: -1, permeability: 1, gravity: false, density: 999 },
   { id: 'soil', name: 'Soil', color: '#6f4e37', icon: '🟫', category: 'terrain', behavior: 'powder', fertility: 0.7, permeability: 0.5, gravity: true, density: 60, displacement: 'sinks' },
   { id: 'rich_soil', name: 'Rich Soil', color: '#4b321f', icon: '🌱', category: 'terrain', behavior: 'powder', fertility: 1, permeability: 0.4, gravity: true, density: 62, displacement: 'sinks' },
   { id: 'sand', name: 'Sand', color: '#d8c27a', icon: '🟨', category: 'terrain', behavior: 'powder', fertility: 0.2, permeability: 0.9, gravity: true, density: 58, displacement: 'sinks' },

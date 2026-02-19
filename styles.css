@@ -87,3 +87,6 @@ canvas {
   flex-wrap: wrap;
   gap: 8px;
 }
+
+.tool-row { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.tool-row button.active { border-color: var(--accent); }
