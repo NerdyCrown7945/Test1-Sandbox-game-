@@ -14,13 +14,6 @@ export function renderWorld(ctx, world, debug) {
     }
   }
 
-  for (const e of world.entities) {
-    ctx.fillStyle = e.color;
-    ctx.beginPath();
-    ctx.arc(e.x, e.y, 3.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
   if (debug) {
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(8, 8, 250, 58);
