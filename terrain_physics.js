@@ -1,9 +1,5 @@
 import { MATERIAL_MAP } from './materials.js';
 
-function densityOf(id) {
-  return MATERIAL_MAP.get(id)?.density ?? 0;
-}
-
 function materialOf(id) {
   return MATERIAL_MAP.get(id);
 }
@@ -16,111 +12,123 @@ function hasGravity(id) {
   return materialOf(id)?.gravity === true;
 }
 
-function displacementOf(id) {
-  return materialOf(id)?.displacement ?? 'neutral';
-}
-
 function isEmpty(id) {
   return id === 'empty';
 }
 
-function canSwapDown(topId, bottomId) {
-  if (isEmpty(bottomId)) return true;
-
-  const topBehavior = behaviorOf(topId);
-  const bottomBehavior = behaviorOf(bottomId);
-
-  if (topBehavior === 'powder') {
-    return false;
-  }
-
-  if (bottomBehavior === 'solid') return false;
-
-  if (bottomBehavior === 'liquid') {
-    const displacement = displacementOf(topId);
-    if (displacement === 'floats') return false;
-    if (displacement === 'sinks') return true;
-  }
-
-  return densityOf(topId) > densityOf(bottomId);
+function swapCells(terrain, fromIndex, toIndex) {
+  const moving = terrain[fromIndex];
+  terrain[fromIndex] = terrain[toIndex];
+  terrain[toIndex] = moving;
 }
 
-export function stepTerrain(world, iterations = 1) {
+export function stepPowderPass(world) {
   const width = world.gridWidth;
   const height = world.gridHeight;
   const terrain = world.terrain;
+  const moved = new Uint8Array(width * height);
 
-  for (let iter = 0; iter < iterations; iter += 1) {
-    for (let y = height - 2; y >= 0; y -= 1) {
-      const leftToRight = Math.random() < 0.5;
-      const xStart = leftToRight ? 0 : width - 1;
-      const xEnd = leftToRight ? width : -1;
-      const xStep = leftToRight ? 1 : -1;
+  for (let y = height - 2; y >= 0; y -= 1) {
+    const leftToRight = Math.random() < 0.5;
+    const xStart = leftToRight ? 0 : width - 1;
+    const xEnd = leftToRight ? width : -1;
+    const xStep = leftToRight ? 1 : -1;
 
-      for (let x = xStart; x !== xEnd; x += xStep) {
-        const idx = y * width + x;
-        const id = terrain[idx];
-        if (isEmpty(id)) continue;
+    for (let x = xStart; x !== xEnd; x += xStep) {
+      const idx = y * width + x;
+      if (moved[idx]) continue;
 
-        const behavior = behaviorOf(id);
-        if (!hasGravity(id) || behavior === 'solid' || behavior === 'empty') continue;
+      const topId = terrain[idx];
+      if (isEmpty(topId) || behaviorOf(topId) !== 'powder' || !hasGravity(topId)) continue;
 
-        const belowIndex = idx + width;
-        const belowId = terrain[belowIndex];
+      const belowIndex = idx + width;
+      const bottomId = terrain[belowIndex];
+      const bottomBehavior = behaviorOf(bottomId);
 
-        if (canSwapDown(id, belowId)) {
-          terrain[belowIndex] = id;
-          terrain[idx] = belowId;
-          continue;
-        }
+      // Priority 1: empty -> fall
+      if (isEmpty(bottomId)) {
+        swapCells(terrain, idx, belowIndex);
+        moved[belowIndex] = 1;
+        continue;
+      }
 
-        if (behavior === 'powder') {
-          const downLeftIndex = x > 0 ? belowIndex - 1 : -1;
-          const downRightIndex = x < width - 1 ? belowIndex + 1 : -1;
+      // Priority 2: liquid -> sinking swap (powder only)
+      if (bottomBehavior === 'liquid') {
+        swapCells(terrain, idx, belowIndex);
+        moved[belowIndex] = 1;
+        continue;
+      }
 
-          const tryMove = (nextIndex) => {
-            if (nextIndex === -1) return false;
-            const nextId = terrain[nextIndex];
-            if (!isEmpty(nextId)) return false;
-            terrain[nextIndex] = id;
-            terrain[idx] = 'empty';
-            return true;
-          };
+      // Priority 3: powder / solid -> stack (no movement)
+    }
+  }
+}
 
-          if (Math.random() < 0.5) {
-            if (tryMove(downLeftIndex)) continue;
-            if (tryMove(downRightIndex)) continue;
-          } else {
-            if (tryMove(downRightIndex)) continue;
-            if (tryMove(downLeftIndex)) continue;
-          }
-        }
+export function stepLiquidPass(world) {
+  const width = world.gridWidth;
+  const height = world.gridHeight;
+  const terrain = world.terrain;
+  const moved = new Uint8Array(width * height);
 
-        if (behavior === 'liquid') {
-          const leftIndex = x > 0 ? idx - 1 : -1;
-          const rightIndex = x < width - 1 ? idx + 1 : -1;
+  for (let y = height - 2; y >= 0; y -= 1) {
+    const leftToRight = Math.random() < 0.5;
+    const xStart = leftToRight ? 0 : width - 1;
+    const xEnd = leftToRight ? width : -1;
+    const xStep = leftToRight ? 1 : -1;
 
-          const trySideMove = (nextIndex) => {
-            if (nextIndex === -1) return false;
-            const nextId = terrain[nextIndex];
-            const nextBehavior = behaviorOf(nextId);
-            if (isEmpty(nextId) || (nextBehavior !== 'solid' && densityOf(id) > densityOf(nextId))) {
-              terrain[nextIndex] = id;
-              terrain[idx] = nextId;
-              return true;
-            }
-            return false;
-          };
+    for (let x = xStart; x !== xEnd; x += xStep) {
+      const idx = y * width + x;
+      if (moved[idx]) continue;
 
-          if (Math.random() < 0.5) {
-            if (trySideMove(leftIndex)) continue;
-            if (trySideMove(rightIndex)) continue;
-          } else {
-            if (trySideMove(rightIndex)) continue;
-            if (trySideMove(leftIndex)) continue;
-          }
-        }
+      const id = terrain[idx];
+      if (isEmpty(id) || behaviorOf(id) !== 'liquid' || !hasGravity(id)) continue;
+
+      const belowIndex = idx + width;
+      const belowId = terrain[belowIndex];
+      const belowBehavior = behaviorOf(belowId);
+
+      // Liquid falls into empty only. Never swap down into powder.
+      if (isEmpty(belowId)) {
+        swapCells(terrain, idx, belowIndex);
+        moved[belowIndex] = 1;
+        continue;
+      }
+
+      if (belowBehavior === 'powder') {
+        continue;
+      }
+
+      const downLeftIndex = x > 0 ? belowIndex - 1 : -1;
+      const downRightIndex = x < width - 1 ? belowIndex + 1 : -1;
+      const leftIndex = x > 0 ? idx - 1 : -1;
+      const rightIndex = x < width - 1 ? idx + 1 : -1;
+
+      const tryMoveToEmpty = (targetIndex) => {
+        if (targetIndex === -1 || moved[targetIndex]) return false;
+        if (!isEmpty(terrain[targetIndex])) return false;
+        swapCells(terrain, idx, targetIndex);
+        moved[targetIndex] = 1;
+        return true;
+      };
+
+      if (Math.random() < 0.5) {
+        if (tryMoveToEmpty(downLeftIndex)) continue;
+        if (tryMoveToEmpty(downRightIndex)) continue;
+        if (tryMoveToEmpty(leftIndex)) continue;
+        if (tryMoveToEmpty(rightIndex)) continue;
+      } else {
+        if (tryMoveToEmpty(downRightIndex)) continue;
+        if (tryMoveToEmpty(downLeftIndex)) continue;
+        if (tryMoveToEmpty(rightIndex)) continue;
+        if (tryMoveToEmpty(leftIndex)) continue;
       }
     }
+  }
+}
+
+export function stepTerrain(world, iterations = 1) {
+  for (let iter = 0; iter < iterations; iter += 1) {
+    stepPowderPass(world);
+    stepLiquidPass(world);
   }
 }
