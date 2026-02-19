@@ -15,8 +15,8 @@ export class SimulationEngine {
     this.performanceMode = 'balanced';
     this.lastTime = 0;
     this.fps = 0;
-    const gridWidth = 160;
-    const gridHeight = 96;
+    const gridWidth = 96;
+    const gridHeight = 54;
     this.world = {
       width: canvas.width,
       height: canvas.height,
