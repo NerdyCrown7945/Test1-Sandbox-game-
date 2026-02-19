@@ -3,7 +3,7 @@ import { createClimate, updateClimate } from './climate.js';
 import { ecosystemStep } from './ecosystem.js';
 import { renderWorld } from './renderer.js';
 import { updateDebugBar } from './ui.js';
-import { stepTerrain } from './terrain_physics.js';
+import { stepPowderPass, stepLiquidPass } from './terrain_physics.js';
 
 export class SimulationEngine {
   constructor(canvas) {
@@ -72,7 +72,10 @@ export class SimulationEngine {
   step(dt) {
     updateClimate(this.world.climate, dt);
     const iterations = this.performanceMode === 'performance' ? 1 : 2;
-    stepTerrain(this.world, iterations);
+    for (let i = 0; i < iterations; i += 1) {
+      stepPowderPass(this.world);
+      stepLiquidPass(this.world);
+    }
     ecosystemStep(this.world, dt);
     updateDebugBar(this, this.fps);
   }
