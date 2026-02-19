@@ -106,8 +106,14 @@ function applyBiomeLifeDynamics(world, dt) {
       }
 
       if (current === 'ant') {
-        const digCandidates = [];
         const belowIdx = y < height - 1 ? idx + width : -1;
+        if (belowIdx !== -1 && terrain[belowIdx] === 'empty' && next[belowIdx] === 'empty') {
+          next[belowIdx] = 'ant';
+          next[idx] = 'empty';
+          continue;
+        }
+
+        const digCandidates = [];
         if (belowIdx !== -1 && (terrain[belowIdx] === 'soil' || terrain[belowIdx] === 'rock')) digCandidates.push(belowIdx);
         for (const nIdx of neighborIndices) {
           const mat = terrain[nIdx];
