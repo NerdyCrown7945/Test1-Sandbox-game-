@@ -1,7 +1,6 @@
 import { MATERIALS } from './materials.js';
-import { LIFEFORM_SPECIES } from './lifeforms.js';
 import { CLIMATE_EVENTS } from './climate.js';
-import { LIFE_TERRAIN_INTERACTION_RULES, TERRAIN_INTERACTION_RULES } from './interactions.js';
+import { TERRAIN_INTERACTION_RULES } from './interactions.js';
 
 function grouped(items) {
   return items.reduce((acc, item) => {
@@ -26,8 +25,8 @@ export function initUI(engine) {
   const matRoot = document.getElementById('materialsPalette');
   if (matRoot) renderMaterialPalette(matRoot, engine);
 
-  const lifeRoot = document.getElementById('lifePalette');
-  if (lifeRoot) renderLifePalette(lifeRoot, engine);
+  renderClimateEvents();
+  renderInteractionRules();
 
   hookEnvControls(engine);
   hookToggles(engine);
@@ -48,7 +47,8 @@ function renderMaterialPalette(root, engine) {
     </section>
   `).join('');
 
-  root.querySelectorAll('[data-material]').forEach((btn) => {
+  root.querySelectorAll('[data-material]').forEach((btn, index) => {
+    if (index === 0) btn.classList.add('selected');
     btn.addEventListener('click', () => {
       root.querySelectorAll('.palette-item').forEach((b) => b.classList.remove('selected'));
       btn.classList.add('selected');
@@ -57,41 +57,22 @@ function renderMaterialPalette(root, engine) {
   });
 }
 
-function renderLifePalette(root, engine) {
-  root.innerHTML = LIFEFORM_SPECIES.map((species, idx) => `
-    <button class="palette-item" data-species="${species}">
-      <span class="swatch" style="background:hsl(${(idx * 37) % 360}deg 75% 55%)"></span>
-      <span class="icon">🧬</span>
-      <span>${species}</span>
-    </button>
-  `).join('');
-
-  root.querySelectorAll('[data-species]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      // 엔진에 spawnSpecies가 없을 수도 있으므로 방어
-      if (typeof engine.spawnSpecies === 'function') {
-        engine.spawnSpecies(btn.dataset.species);
-      } else if (engine.world && typeof engine.world.spawnSpecies === 'function') {
-        engine.world.spawnSpecies(btn.dataset.species);
-      } else {
-        console.warn('spawnSpecies()가 엔진에 없습니다. engine.spawnSpecies 또는 engine.world.spawnSpecies를 구현하세요.');
-      }
-    });
-  });
-
+function renderClimateEvents() {
   const ce = document.getElementById('climateEvents');
-  if (ce) {
-    ce.innerHTML = CLIMATE_EVENTS
-      .map((event) => `<li><strong>${event.name}</strong>: ${event.impact}</li>`)
-      .join('');
-  }
+  if (!ce) return;
 
+  ce.innerHTML = CLIMATE_EVENTS
+    .map((event) => `<li><strong>${event.name}</strong>: ${event.impact}</li>`)
+    .join('');
+}
+
+function renderInteractionRules() {
   const interactionRoot = document.getElementById('interactionRules');
-  if (interactionRoot) {
-    const terrainRows = TERRAIN_INTERACTION_RULES.map((rule) => `<li><strong>${rule.id}</strong>: ${rule.summary}</li>`);
-    const lifeRows = LIFE_TERRAIN_INTERACTION_RULES.map((rule) => `<li><strong>${rule.id}</strong>: ${rule.summary}</li>`);
-    interactionRoot.innerHTML = [...terrainRows, ...lifeRows].join('');
-  }
+  if (!interactionRoot) return;
+
+  interactionRoot.innerHTML = TERRAIN_INTERACTION_RULES
+    .map((rule) => `<li><strong>${rule.id}</strong>: ${rule.summary}</li>`)
+    .join('');
 }
 
 function hookEnvControls(engine) {
@@ -120,28 +101,20 @@ function hookToggles(engine) {
     engine.debug = !engine.debug;
   });
 
-  const rl = document.getElementById('toggleRL');
-  if (rl) rl.addEventListener('click', () => {
-    engine.world.rlEnabled = !engine.world.rlEnabled;
-  });
-
   const perf = document.getElementById('performanceMode');
   if (perf) perf.addEventListener('change', (e) => {
     engine.performanceMode = e.target.value;
-    engine.world.maxEntities = e.target.value === 'performance' ? 350 : 700;
   });
 }
 
-export function updateDebugBar(engine, fps, evolutionText) {
+export function updateDebugBar(engine, fps) {
   const fpsEl = document.getElementById('fps');
-  const countEl = document.getElementById('entityCount');
-  const avgEl = document.getElementById('avgGene');
+  const countEl = document.getElementById('cellStats');
+  const nutritionEl = document.getElementById('soilNutrition');
   const evoEl = document.getElementById('evoStatus');
 
-  const avgGene = engine.world.entities.reduce((acc, e) => acc + e.dna.intelligence, 0) / Math.max(1, engine.world.entities.length);
-
   if (fpsEl) fpsEl.textContent = fps.toFixed(0);
-  if (countEl) countEl.textContent = String(engine.world.entities.length);
-  if (avgEl) avgEl.textContent = avgGene.toFixed(1);
-  if (evoEl) evoEl.textContent = evolutionText;
+  if (countEl) countEl.textContent = String(engine.world.terrain.length);
+  if (nutritionEl) nutritionEl.textContent = engine.world.soilNutrition.toFixed(2);
+  if (evoEl) evoEl.textContent = 'N/A';
 }

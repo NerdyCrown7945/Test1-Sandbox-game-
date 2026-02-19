@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Eco Sandbox Evolution Engine</title>
+    <title>Eco Sandbox Material Engine</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -11,9 +11,7 @@
       <header class="top-bar">
         <div class="tabs">
           <button data-tab="tab-materials" class="active">Materials</button>
-          <button data-tab="tab-life">Life</button>
           <button data-tab="tab-environment">Environment</button>
-          <button data-tab="tab-evolution">Evolution</button>
           <button data-tab="tab-debug">Debug</button>
         </div>
 
@@ -43,11 +41,7 @@
 
           <div class="tab-content">
             <section id="tab-materials" class="tab-panel active">
-              <p>중력 재질(모래/물/용암/슬러지/넥타)은 자동으로 아래로 흐릅니다. 위에서 칠하면 지형이 스스로 재배치됩니다.</p>
-            </section>
-
-            <section id="tab-life" class="tab-panel">
-              <p>포식·피식, 번식 회복, 지형 기반 먹이/독성 상호작용이 활성화되어 있습니다. 우측 팔레트로 개체를 추가해 반응을 관찰하세요.</p>
+              <p>powder는 아래로 낙하하고 대각선으로 미끄러지며, liquid는 아래로 낙하 후 좌우로 퍼집니다.</p>
               <ul id="interactionRules"></ul>
             </section>
 
@@ -55,13 +49,8 @@
               <ul id="climateEvents"></ul>
             </section>
 
-            <section id="tab-evolution" class="tab-panel">
-              <p>진화 트리: microbe → primitive organism → predator class → apex predator</p>
-            </section>
-
             <section id="tab-debug" class="tab-panel">
               <button id="toggleDebug">디버그 토글</button>
-              <button id="toggleRL">RL 모드 토글</button>
               <label>성능 모드
                 <select id="performanceMode">
                   <option value="balanced">Balanced</option>
@@ -73,20 +62,19 @@
         </section>
 
         <aside class="right-panel">
-          <h3>Life Forms Palette</h3>
-          <div id="lifePalette"></div>
+          <h3>Interactions</h3>
+          <p>도감과 시뮬레이션은 동일한 interaction rule 데이터를 사용합니다.</p>
         </aside>
       </main>
 
       <footer class="bottom-bar">
         <span>FPS: <strong id="fps">0</strong></span>
-        <span>개체수: <strong id="entityCount">0</strong></span>
-        <span>평균 유전자값(Intelligence): <strong id="avgGene">0</strong></span>
-        <span>진화 상태: <strong id="evoStatus">조건 미충족</strong></span>
+        <span>Cells: <strong id="cellStats">0</strong></span>
+        <span>Soil Nutrition: <strong id="soilNutrition">0</strong></span>
+        <span>Evolution: <strong id="evoStatus">N/A</strong></span>
       </footer>
     </div>
 
-    <!-- ✅ 핵심: DOM 준비 후 실행 보장 -->
     <script type="module" src="app.js" defer></script>
   </body>
 </html>

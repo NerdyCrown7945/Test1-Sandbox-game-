@@ -4,8 +4,16 @@ function densityOf(id) {
   return MATERIAL_MAP.get(id)?.density ?? 0;
 }
 
+function materialOf(id) {
+  return MATERIAL_MAP.get(id);
+}
+
 function behaviorOf(id) {
-  return MATERIAL_MAP.get(id)?.behavior ?? 'solid';
+  return materialOf(id)?.behavior ?? 'solid';
+}
+
+function hasGravity(id) {
+  return materialOf(id)?.gravity === true;
 }
 
 function isEmpty(id) {
@@ -37,7 +45,7 @@ export function stepTerrain(world, iterations = 1) {
         if (isEmpty(id)) continue;
 
         const behavior = behaviorOf(id);
-        if (behavior === 'solid' || behavior === 'empty') continue;
+        if (!hasGravity(id) || behavior === 'solid' || behavior === 'empty') continue;
 
         const belowIndex = idx + width;
         const belowId = terrain[belowIndex];

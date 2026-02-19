@@ -1,9 +1,6 @@
 import { createTerrain, MATERIAL_MAP } from './materials.js';
-import { spawnInitialPopulation, spawnLifeform } from './lifeforms.js';
 import { createClimate, updateClimate } from './climate.js';
-import { evaluateState, applyStateBehavior } from './ai_fsm.js';
 import { ecosystemStep } from './ecosystem.js';
-import { collectPopulationStats, evaluateEvolution } from './evolution.js';
 import { renderWorld } from './renderer.js';
 import { updateDebugBar } from './ui.js';
 import { stepTerrain } from './terrain_physics.js';
@@ -16,7 +13,6 @@ export class SimulationEngine {
     this.debug = true;
     this.selectedMaterial = 'soil';
     this.performanceMode = 'balanced';
-    this.history = {};
     this.lastTime = 0;
     this.fps = 0;
     this.world = {
@@ -26,10 +22,7 @@ export class SimulationEngine {
       gridHeight: 72,
       terrain: createTerrain(120, 72),
       climate: createClimate(),
-      entities: spawnInitialPopulation(80),
-      maxEntities: 700,
-      soilNutrition: 0.5,
-      rlEnabled: false
+      soilNutrition: 0.5
     };
 
     this.bindCanvasDraw();
@@ -62,11 +55,6 @@ export class SimulationEngine {
     });
   }
 
-  spawnSpecies(species) {
-    if (this.world.entities.length >= this.world.maxEntities) return;
-    this.world.entities.push(spawnLifeform({ species }));
-  }
-
   run() {
     const loop = (time) => {
       if (!this.lastTime) this.lastTime = time;
@@ -85,21 +73,7 @@ export class SimulationEngine {
     updateClimate(this.world.climate, dt);
     const iterations = this.performanceMode === 'performance' ? 1 : 2;
     stepTerrain(this.world, iterations);
-
-    for (const entity of this.world.entities) {
-      entity.state = evaluateState(entity, entity._context || {});
-      applyStateBehavior(entity, dt, this.world);
-    }
-
     ecosystemStep(this.world, dt);
-
-    const stats = collectPopulationStats(this.world.entities, this.world.climate);
-    for (const key of Object.keys(stats)) {
-      if (stats[key].adaptationScore > 0.55) this.history[key] = (this.history[key] || 0) + 1;
-      else this.history[key] = 0;
-    }
-    const transitions = evaluateEvolution(stats, this.history);
-    const evoText = transitions.length ? `${transitions[0].from} → ${transitions[0].to}` : '조건 미충족';
-    updateDebugBar(this, this.fps, evoText);
+    updateDebugBar(this, this.fps);
   }
 }

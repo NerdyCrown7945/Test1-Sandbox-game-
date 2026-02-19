@@ -56,7 +56,7 @@ label { font-size: 13px; display: flex; gap: 6px; align-items: center; }
   padding: 8px;
 }
 
-#materialsPalette, #lifePalette { max-height: 620px; overflow: auto; }
+#materialsPalette { max-height: 620px; overflow: auto; }
 .palette-group h4 { margin: 8px 0; color: #94a3b8; text-transform: capitalize; }
 .palette-item {
   width: 100%;
